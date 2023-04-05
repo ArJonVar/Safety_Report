@@ -19,8 +19,8 @@ class FwApi():
         grid.token=smartsheet_token
         self.smart = smartsheet.Smartsheet(access_token=self.smartsheet_token)
         self.smart.errors_as_exceptions(True)
-        self.safety_pl_sheet_id = 4916349521684356
-        self.update_stamp_sum_id = 790362046392196
+        self.safety_pl_sheet_id = 8139053347432324
+        self.update_stamp_sum_id = 8890058333808516
         self.start_time = time.time()
         self.log=ghetto_logger("cron_fw_update.py")
     def timestamp(self): 
@@ -125,7 +125,7 @@ class FwApi():
         url = f"https://app.fieldwire.com/api/v3/projects/{proj_id}/forms"  
         headers = {
             "accept": "application/json",
-            "Authorization": "Token api=YIJTTxb2Hb0YNYWf2X01JnAMz3nT9hzdyf23JOhB",
+            "Authorization": f"Token api={self.fw_token}",
             "Fieldwire-Filter": "active",
             "Fieldwire-Per-Page": "10000"
         }
