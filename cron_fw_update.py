@@ -83,6 +83,8 @@ class FwApi():
         self.recent_geninfo_columnid = df.loc[df['title'] == 'SSSP - General Information']['id'].to_list()[0]
         self.count_premob_columnid = df.loc[df['title'] == 'Total Count SSSP - Pre-Mob Sub Checklists']['id'].to_list()[0]
         self.count_phasereview_columnid = df.loc[df['title'] == 'Total Count SSSP - Phase Reviews']['id'].to_list()[0]
+        self.count_photos_columnid = df.loc[df['title'] == 'Count Photos']['id'].to_list()[0]
+        self.recent_photo_columnid = df.loc[df['title'] == 'Most Recent Photo']['id'].to_list()[0]
 #endregion
 #region fw data
     def fw_api_call(self, url):
@@ -120,9 +122,9 @@ class FwApi():
 
 
         return template_id_dict
-    def get_all_forms(self, proj_id):
+    def fw_api_call_activenall(self, url):
         '''gets all forms per proj id'''
-        url = f"https://app.fieldwire.com/api/v3/projects/{proj_id}/forms"  
+        url = f"https://app.fieldwire.com/api/v3/projects/{url}"  
         headers = {
             "accept": "application/json",
             "Authorization": f"Token api={self.fw_token}",
@@ -132,12 +134,30 @@ class FwApi():
         response = requests.get(url, headers=headers)
         content = json.loads(response.content)
         return content
+    def fw_api_call_paginated(self, url, paginated_data):
+        # Retrieve data from the specified API endpoint
+        results = self.fw_api_call(url) 
+        for result in results:
+            paginated_data.append(result)
+        # If there is a next page of data, recursively call this function with updated parameters
+        if len(results) == 50:
+            try:
+                # Extract the "last_updated_at" value from the last element of the current page
+                last_updated_at = results[-1]['updated_at']   
+                # Set up parameters for next page request, including the "last_updated_at" value
+                url_paginated = url + f"?last_synced_at={last_updated_at}"  
+                # Recursively call this function with updated parameters for the next page
+                self.fw_api_call_paginated(url_paginated, paginated_data) 
+            except:
+                pass
+        return paginated_data   
+    
     def fetch_fw_data(self, id, url, name):
         '''manages fw api calls, and fails them at once if needed'''
         try:
             status_dict=self.get_statuses(id)
             template_dict=self.get_templates(id)
-            forms_data = self.get_all_forms(id)
+            forms_data = self.fw_api_call_activenall(f'{id}/forms')
             return {"status_dict":status_dict, "template_dict":template_dict, "forms_data":forms_data}
         except AttributeError:
             self.log.log(f"Need access to {name}: {url}")
@@ -168,8 +188,8 @@ class FwApi():
         return data
 #endregion
 #region post data
-    def calc_meta_data(self, forms, template):
-        '''returns count and more recent for various templates'''
+    def calc_form_data(self, forms, template):
+        '''returns count and most recent for various templates'''
         filtered_data = []
         for form in forms:
             # filters for Daily Job Log template w/ completed/submitted status
@@ -181,6 +201,24 @@ class FwApi():
             count = 0
         try:
             most_recent_date = max(form['created_at'] for form in filtered_data)
+        except: 
+            most_recent_date = "N/A"
+
+        return count, most_recent_date
+    def cal_attachment_data(self, proj_id):
+        '''returns count and most recent for (photo) attachments'''
+        data = self.fw_api_call_activenall(f'{proj_id}/attachments')
+        filtered_data = []
+        for attachment in data:
+            # filters for Daily Job Log template w/ completed/submitted status
+            if attachment.get('kind') == 'photo':
+                filtered_data.append(attachment)
+        try:
+            count = len(filtered_data)
+        except:
+            count = 0
+        try:
+            most_recent_date = max(attachment['created_at'] for attachment in filtered_data)
         except: 
             most_recent_date = "N/A"
 
@@ -198,12 +236,13 @@ class FwApi():
             return ""
     def pull_main_data(self, item):
         '''the main data pull, which grabs all needed data, and formats it correct'''
-        count_daily_joblog,recent_daily_joblog = self.calc_meta_data(item.get('forms'), "Daily Job Log")
-        count_weekly_safetymeeting, recent_weekly_safetymeeting=self.calc_meta_data(item.get('forms'), "Weekly Site Safety Meeting")
-        count_safety_inspections, recent_safety_inspections = self.calc_meta_data(item.get('forms'), "Weekly Site Safety Inspection")
-        count_sssp, recent_sssp = self.calc_meta_data(item.get('forms'), "General Project Info")
-        count_premob, recent_premob= self.calc_meta_data(item.get('forms'), "Pre-mob Sub Checklist")
-        count_phase_review, recent_phase_review = self.calc_meta_data(item.get('forms'), "Project Phase Review")
+        count_daily_joblog,recent_daily_joblog = self.calc_form_data(item.get('forms'), "Daily Job Log")
+        count_weekly_safetymeeting, recent_weekly_safetymeeting=self.calc_form_data(item.get('forms'), "Weekly Site Safety Meeting")
+        count_safety_inspections, recent_safety_inspections = self.calc_form_data(item.get('forms'), "Weekly Site Safety Inspection")
+        count_sssp, recent_sssp = self.calc_form_data(item.get('forms'), "General Project Info")
+        count_premob, recent_premob= self.calc_form_data(item.get('forms'), "Pre-mob Sub Checklist")
+        count_phase_review, recent_phase_review = self.calc_form_data(item.get('forms'), "Project Phase Review")
+        count_photo, recent_photo=self.cal_attachment_data(item.get('fw_id'))
         post = [{"name":"count_daily_joblog", "value":count_daily_joblog, "column_id": self.count_joblog_columnid },
                 {"name":"recent_daily_joblog", "value": self.date_parser(recent_daily_joblog), "column_id":self.recent_joblog_columnid},
                 {"name":'count_weekly_safetymeeting', "value":count_weekly_safetymeeting, "column_id":self.count_safetymeeting_columnid},
@@ -212,7 +251,9 @@ class FwApi():
                 {"name":'recent_safety_inspections', "value":self.date_parser(recent_safety_inspections), "column_id":self.recent_safetyinspections_columnid},
                 {"name":'recent_sssp',  "value":self.date_parser(recent_sssp), "column_id":self.recent_geninfo_columnid},
                 {'name':'count_premob', "value":count_premob, "column_id":self.count_premob_columnid},
-                {"name":'count_phase_review', "value":count_phase_review, "column_id":self.count_phasereview_columnid}
+                {"name":'count_phase_review', "value":count_phase_review, "column_id":self.count_phasereview_columnid},
+                {"name": 'count_photo', "value":count_photo, 'column_id':self.count_photos_columnid},
+                {"name": "recent_photo", "value": self.date_parser(recent_photo), 'column_id':self.recent_photo_columnid}
             ]
         item["post"]=post
         
@@ -291,16 +332,3 @@ class FwApi():
 if __name__ == "__main__":
     fa = FwApi(smartsheet_token, fw_api_key)
     fa.run()
-
-
-
-# [{"name":"count_daily_joblog", "value":count_daily_joblog, "column_id": "734374284552068"},
-#                             {"name":"recent_daily_joblog", "value": self.date_parser(recent_daily_joblog), "column_id":"8052723679029124"},
-#                             {"name":'count_weekly_safetymeeting', "value":count_weekly_safetymeeting, "column_id":"5562574521558916"},
-#                             {"name":'recent_weekly_safetymeeting', "value":self.date_parser(recent_weekly_safetymeeting), "column_id":"1015869528663940"},
-#                             {"name":'count_safety_inspections', "value":count_safety_inspections, "column_id":"3310774707873668"},
-#                             {"name":'recent_safety_inspections', "value":self.date_parser(recent_safety_inspections), "column_id":"5519469156034436"},
-#                             {"name":'recent_sssp',  "value":self.date_parser(recent_sssp), "column_id":"2184874801031044"},
-#                             {'name':'count_premob', "value":count_premob, "column_id":"7814374335244164"},
-#                             {"name":'count_phase_review', "value":count_phase_review, "column_id":"6688474428401540"}
-#                         ]
