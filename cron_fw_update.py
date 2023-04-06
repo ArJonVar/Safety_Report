@@ -134,30 +134,33 @@ class FwApi():
         response = requests.get(url, headers=headers)
         content = json.loads(response.content)
         return content
-    def fw_api_call_paginated(self, url, paginated_data):
+    def fw_api_call_paginated(self, url):
+        '''paginates asking for 1000 entries so we get ALL'''
+        # Set up initial parameters for API request
+        url_paginated = url
         # Retrieve data from the specified API endpoint
-        results = self.fw_api_call(url) 
-        for result in results:
-            paginated_data.append(result)
-        # If there is a next page of data, recursively call this function with updated parameters
-        if len(results) == 50:
-            try:
+        while True:
+            # Fetch results from API using current parameters
+            results = self.fw_api_call_activenall(url_paginated)
+            # Yield each result as it's fetched
+            for result in results:
+                yield result
+            # If there is a next page of data, update parameters for next request
+            if len(results) == 1000:
                 # Extract the "last_updated_at" value from the last element of the current page
-                last_updated_at = results[-1]['updated_at']   
-                # Set up parameters for next page request, including the "last_updated_at" value
-                url_paginated = url + f"?last_synced_at={last_updated_at}"  
-                # Recursively call this function with updated parameters for the next page
-                self.fw_api_call_paginated(url_paginated, paginated_data) 
-            except:
-                pass
-        return paginated_data   
-    
+                last_updated_at = results[-1]['updated_at']
+                # Update parameters for next page request, including the "last_updated_at" value
+                url_paginated = url + f"?last_synced_at={last_updated_at}" 
+            else:
+                # If there are no more results, break out of the loop
+                break
+            
     def fetch_fw_data(self, id, url, name):
         '''manages fw api calls, and fails them at once if needed'''
         try:
             status_dict=self.get_statuses(id)
             template_dict=self.get_templates(id)
-            forms_data = self.fw_api_call_activenall(f'{id}/forms')
+            forms_data = self.fw_api_call_paginated(f'{id}/forms')
             return {"status_dict":status_dict, "template_dict":template_dict, "forms_data":forms_data}
         except AttributeError:
             self.log.log(f"Need access to {name}: {url}")
@@ -207,7 +210,7 @@ class FwApi():
         return count, most_recent_date
     def cal_attachment_data(self, proj_id):
         '''returns count and most recent for (photo) attachments'''
-        data = self.fw_api_call_activenall(f'{proj_id}/attachments')
+        data = self.fw_api_call_paginated(f'{proj_id}/attachments')
         filtered_data = []
         for attachment in data:
             # filters for Daily Job Log template w/ completed/submitted status
