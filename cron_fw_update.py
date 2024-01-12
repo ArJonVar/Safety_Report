@@ -67,6 +67,7 @@ class FwApi():
                     id = item.get("FW")[38:74]
                 except:
                     self.log.log(f"FW link for {item.get('FW')} is incorrect and id could not be extrapolated")
+                    item["fw_id"] = "None"
                 item["fw_id"] = id
             else:
                 item["fw_id"] = "None"
@@ -241,7 +242,7 @@ class FwApi():
         '''the main data pull, which grabs all needed data, and formats it correct'''
         count_daily_joblog,recent_daily_joblog = self.calc_form_data(item.get('forms'), "Daily Job Log")
         count_weekly_safetymeeting, recent_weekly_safetymeeting=self.calc_form_data(item.get('forms'), "Weekly Site Safety Meeting")
-        count_safety_inspections, recent_safety_inspections = self.calc_form_data(item.get('forms'), "Weekly Site Safety Inspection")
+        count_safety_inspections, recent_safety_inspections = self.calc_form_data(item.get('forms'), "Site Safety Inspection")
         count_sssp, recent_sssp = self.calc_form_data(item.get('forms'), "General Project Info")
         count_premob, recent_premob= self.calc_form_data(item.get('forms'), "Pre-mob Sub Checklist")
         count_phase_review, recent_phase_review = self.calc_form_data(item.get('forms'), "Project Phase Review")
@@ -255,7 +256,7 @@ class FwApi():
                 {"name":'recent_sssp',  "value":self.date_parser(recent_sssp), "column_id":self.recent_geninfo_columnid},
                 {'name':'count_premob', "value":count_premob, "column_id":self.count_premob_columnid},
                 {"name":'count_phase_review', "value":count_phase_review, "column_id":self.count_phasereview_columnid},
-                {"name": 'count_photo', "value":count_photo, 'column_id':self.count_photos_columnid},
+                {"name":'count_photo', "value":count_photo, 'column_id':self.count_photos_columnid},
                 {"name": "recent_photo", "value": self.date_parser(recent_photo), 'column_id':self.recent_photo_columnid}
             ]
         item["post"]=post
