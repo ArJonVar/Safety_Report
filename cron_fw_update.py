@@ -192,12 +192,14 @@ class FwApi():
         return data
 #endregion
 #region post data
-    def calc_form_data(self, forms, template):
+    def calc_form_data(self, forms, template_input, template_input_option_2 = "ABCDEFGHIJKLMNOPQRSTUVXYZ"):
         '''returns count and most recent for various templates'''
         filtered_data = []
         for form in forms:
-            # filters for Daily Job Log template w/ completed/submitted status
-            if form.get('template').find(template) != -1 and (form.get('status').find("Complete") != -1 or form.get('status').find("Submitted") != -1):
+                status = str(form.get('status')).lower()
+                template = str(form.get('template')).lower()
+                # filters out drafts from Daily Job Log template
+                if (template.find(template_input.lower()) != -1 or template.find(template_input_option_2.lower()) != -1) and (status.find("draft") == -1):
                     filtered_data.append(form)
         try:
             count = len(filtered_data)
@@ -240,12 +242,12 @@ class FwApi():
             return ""
     def pull_main_data(self, item):
         '''the main data pull, which grabs all needed data, and formats it correct'''
-        count_daily_joblog,recent_daily_joblog = self.calc_form_data(item.get('forms'), "Daily Job Log")
-        count_weekly_safetymeeting, recent_weekly_safetymeeting=self.calc_form_data(item.get('forms'), "Weekly Site Safety Meeting")
-        count_safety_inspections, recent_safety_inspections = self.calc_form_data(item.get('forms'), "Site Safety Inspection")
-        count_sssp, recent_sssp = self.calc_form_data(item.get('forms'), "General Project Info")
-        count_premob, recent_premob= self.calc_form_data(item.get('forms'), "Pre-mob Sub Checklist")
-        count_phase_review, recent_phase_review = self.calc_form_data(item.get('forms'), "Project Phase Review")
+        count_daily_joblog,recent_daily_joblog = self.calc_form_data(item.get('forms'), "Daily Job Log", "DJL")
+        count_weekly_safetymeeting, recent_weekly_safetymeeting=self.calc_form_data(item.get('forms'), "Safety Meeting")
+        count_safety_inspections, recent_safety_inspections = self.calc_form_data(item.get('forms'), "Safety Inspection")
+        count_sssp, recent_sssp = self.calc_form_data(item.get('forms'), "General Project")
+        count_premob, recent_premob= self.calc_form_data(item.get('forms'), "Pre-mob")
+        count_phase_review, recent_phase_review = self.calc_form_data(item.get('forms'), "Phase Review")
         count_photo, recent_photo=self.cal_attachment_data(item.get('fw_id'))
         post = [{"name":"count_daily_joblog", "value":count_daily_joblog, "column_id": self.count_joblog_columnid },
                 {"name":"recent_daily_joblog", "value": self.date_parser(recent_daily_joblog), "column_id":self.recent_joblog_columnid},
