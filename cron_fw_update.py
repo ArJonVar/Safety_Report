@@ -43,7 +43,7 @@ class FwApi():
         return sheet.df
     def clean_smartsheet_data(self, safety_df):
         '''filters the data for the parameters we need, and then only returns columns we need'''
-        safety_df1 = safety_df.query("`JOB TYPE` == 'Construction'")
+        safety_df1 = safety_df.query("`JOB TYPE` == 'Construction' or `JOB TYPE` == 'Small Projects'")
         safety_df2 = safety_df1.query("STATUS == 'Active'")
 
         safety_df_reordered = safety_df2  [ 
@@ -196,11 +196,11 @@ class FwApi():
         '''returns count and most recent for various templates'''
         filtered_data = []
         for form in forms:
-                status = str(form.get('status')).lower()
-                template = str(form.get('template')).lower()
-                # filters out drafts from Daily Job Log template
-                if (template.find(template_input.lower()) != -1 or template.find(template_input_option_2.lower()) != -1) and (status.find("draft") == -1):
-                    filtered_data.append(form)
+            status = str(form.get('status')).lower()
+            template = str(form.get('template')).lower()
+            # filters out drafts from Daily Job Log template
+            if (template.find(template_input.lower()) != -1 or template.find(template_input_option_2.lower()) != -1) and (status.find("draft") == -1):
+                filtered_data.append(form)
         try:
             count = len(filtered_data)
         except:
@@ -270,7 +270,7 @@ class FwApi():
         for item in data:
             id = item.get("fw_id")
             forms = item.get("forms")
-            if id != "None" and forms != []:
+            if id != "None":
                 try:
                     self.pull_main_data(item)
                 except:
