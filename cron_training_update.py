@@ -127,16 +127,22 @@ class TrainingUpdater():
             #region GENERATING CONDITIONAL POSTING DATA PER JOB TITLE
             result_sup = self.get_employee_handler(sup, 'sup', enum)
             if sup.find("N/A") == -1:
-                osha = ""
-                cpr = ""
+                sup_osha = ""
+                sup_cpr = ""
             else:
-                osha = "N/A"
-                cpr = "N/A"
+                sup_osha = "N/A"
+                sup_cpr = "N/A"
             for result in result_sup:
                 if result[0] == "OSHA Training":
-                    osha = result[1]
+                    if sup_osha == "" or sup_osha == "N/A":
+                        sup_osha = result[1]
+                    elif result[1] > sup_osha:
+                        sup_osha = result[1]
                 if result[0] == 'First Aid/CPR':
-                    cpr = result[1]
+                    if sup_cpr == "" or sup_cpr == "N/A":
+                        sup_cpr = result[1]
+                    elif result[1] > sup_cpr:
+                        sup_cpr = result[1]
 
             result_pm = self.get_employee_handler(pm, 'pm', enum)
             if pm.find("N/A") == -1:
@@ -145,7 +151,10 @@ class TrainingUpdater():
                 pm_osha="N/A"
             for result in result_pm:
                 if result[0] == "OSHA Training":
-                    pm_osha = result[1]
+                    if pm_osha == "" or pm_osha == "N/A":
+                        pm_osha = result[1]
+                    elif result[1] > pm_osha:
+                        pm_osha = result[1]
 
             result_pe = self.get_employee_handler(pe, 'pe', enum)
             if pe.find("N/A") == -1:
@@ -154,7 +163,10 @@ class TrainingUpdater():
                 pe_osha="N/A"
             for result in result_pe:
                 if result[0] == "OSHA Training":
-                    pe_osha = result[1]
+                    if (pe_osha == "" or pe_osha == "N/A"):
+                        pe_osha = result[1]
+                    elif result[1] > pe_osha:
+                        pe_osha = result[1]
 
             result_fm = self.get_employee_handler(fm, 'fm', enum)
             if pe.find("N/A") == -1:
@@ -165,16 +177,22 @@ class TrainingUpdater():
                 fm_cpr="N/A"
             for result in result_fm:
                 if result[0] == "OSHA Training":
-                    fm_osha = result[1]
+                    if fm_osha == "" or fm_osha == "N/A":
+                        fm_osha = result[1]
+                    elif result[1] > fm_osha:
+                        fm_osha = result[1]
                 if result[0] == 'First Aid/CPR':
-                    fm_cpr = result[1]
+                    if fm_cpr == "" or fm_cpr == "N/A":
+                        fm_cpr = result[1]
+                    elif result[1] > fm_cpr:
+                        fm_cpr = result[1]
             #endregion
 
             #region dev functions
             # posting_data.append({enum: {"Superintendent OSHA-30 Complete": osha30, "Superintendent First Aid/CPR Complete": cpr, "PM OSHA-10": pm_osha10, "PE OSHA-10": pe_osha10, "FM OSHA-10": fm_osha10, "FM First Aid/CPR":fm_cpr}})
             # posting_data.append([enum, sup, pm, pe, fm])
             #endregion
-            posting_data.append({record.get('id'): [{"column_id": "2278907057596292","value": osha}, {"column_id": "6782506684966788","value": cpr}, {"column_id": "6985340810487684","value":pm_osha}, {"column_id": "1355841276274564","value":pe_osha}, {"column_id": "5859440903645060","value":fm_osha}, {"column_id": "8531968197453700","value":fm_cpr}]})
+            posting_data.append({record.get('id'): [{"column_id": "2278907057596292","value": sup_osha}, {"column_id": "6782506684966788","value": sup_cpr}, {"column_id": "6985340810487684","value":pm_osha}, {"column_id": "1355841276274564","value":pe_osha}, {"column_id": "5859440903645060","value":fm_osha}, {"column_id": "8531968197453700","value":fm_cpr}]})
         return posting_data
     def post_data(self, posting_data):
         self.log.log(f"{self.timestamp()} posting...")
